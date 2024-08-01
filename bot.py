@@ -593,5 +593,20 @@ async def status_command(client, message: Message):
 async def start_command(client, message):
     await message.reply("Bot is running!")
 
+# Health check endpoint
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b'OK')
+
+def run_health_check_server():
+    server_address = ('', 8000)
+    httpd = HTTPServer(server_address, HealthCheckHandler)
+    httpd.serve_forever()
+
 if __name__ == "__main__":
+    # Start health check server in a separate thread
+    threading.Thread(target=run_health_check_server, daemon=True).start()
     app.run()
