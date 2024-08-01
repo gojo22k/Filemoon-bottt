@@ -1,6 +1,9 @@
 from pyrogram import Client, filters
 from api import set_api_key, view_api_key, list_users, get_user_api_key, add_user
 from functools import wraps
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+import logging
+from config import IMAGE_URL
 
 def require_api_key(func):
     @wraps(func)
@@ -22,7 +25,7 @@ def register_handlers(app: Client, admin_user_id: int):
         if not api_key:
             await message.reply("Welcome! Please set your API key using /set_key <API_KEY> to get started.")
         else:
-            await message.reply("Welcome back! You can use the bot commands now.")
+            await start_command(client, message)
 
     @app.on_message(filters.command("set_key"))
     async def set_api_key_handler(client, message):
@@ -31,7 +34,8 @@ def register_handlers(app: Client, admin_user_id: int):
         if len(args) > 1:
             api_key = args[1]
             set_api_key(user_id, api_key)
-            await message.reply("API key set successfully.")
+            await message.reply("API key set successfully. You can now use the bot commands.")
+            await start_command(client, message)  # Call the main start command once the API key is set
         else:
             await message.reply("Usage: /set_key <API_KEY>")
 
@@ -48,3 +52,30 @@ def register_handlers(app: Client, admin_user_id: int):
             await message.reply(f"User list:\n{user_list}")
         else:
             await message.reply("You are not authorized to use this command.")
+
+async def start_command(client, message):
+    buttons = [
+        [InlineKeyboardButton("📖 Tutorial", callback_data="show_tutorial")],
+        [InlineKeyboardButton("ℹ️ Account Info", callback_data="account_info")],
+        [InlineKeyboardButton("📁 All Folders", callback_data="all_folders")],
+    ]
+    reply_markup = InlineKeyboardMarkup(buttons)
+
+    if IMAGE_URL:
+        try:
+            await message.reply_photo(
+                photo=IMAGE_URL,
+                caption="Wᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ FɪʟᴇMᴏᴏɴ Bᴏᴛ! Usᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴs ʙᴇʟᴏᴡ ᴛᴏ ɢᴇᴛ sᴛᴀʀᴛᴇᴅ:",
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            logging.error(f"Error sending photo: {e}")
+            await message.reply(
+                "Wᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ FɪʟᴇMᴏᴏɴ Bᴏᴛ! Usᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴs ʙᴇʟᴏᴡ ᴛᴏ ɢᴇᴛ sᴛᴀʀᴛᴇᴅ:",
+                reply_markup=reply_markup
+            )
+    else:
+        await message.reply(
+            "Wᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ FɪʟᴇMᴏᴏɴ Bᴏᴛ! Usᴇ ᴛʜᴇ ʙᴜᴛᴛᴏɴs ʙᴇʟᴏᴡ ᴛᴏ ɢᴇᴛ sᴛᴀʀᴛᴇᴅ:",
+            reply_markup=reply_markup
+        )
