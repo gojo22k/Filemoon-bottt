@@ -2,6 +2,8 @@ import logging
 import time
 import asyncio
 import requests
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from config import API_ID, API_HASH, BOT_TOKEN, IMAGE_URL, PAGE_SIZE, ADMIN_USER_ID
@@ -601,12 +603,13 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b'OK')
 
+# Function to run the health check server
 def run_health_check_server():
     server_address = ('', 8000)
     httpd = HTTPServer(server_address, HealthCheckHandler)
     httpd.serve_forever()
 
 if __name__ == "__main__":
-    # Start health check server in a separate thread
+    # Start the health check server in a separate thread
     threading.Thread(target=run_health_check_server, daemon=True).start()
     app.run()
