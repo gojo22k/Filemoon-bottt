@@ -22,20 +22,7 @@ async def fetch_user_api_key(user_id):
     if api_key:
         return api_key
     return None
-
-# Example command handler to use the user's API key
-@app.on_message(filters.command("some_command"))  # Replace with actual command
-async def some_command_handler(client, message):
-    user_id = message.from_user.id
-    api_key = await fetch_user_api_key(user_id)
-    if api_key:
-        # Use the api_key for the user's request
-        # Your command logic here
-        await message.reply(f"Using your API key: {api_key}")
-    else:
-        await message.reply("You must set your API key first using /set_key <API_KEY>.")
-
-
+    
 # Pagination variables
 current_rename_folder_id = None
 current_delete_folder_id = None
