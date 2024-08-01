@@ -589,4 +589,9 @@ async def status_command(client, message: Message):
     latency = (time.time() - start_time) * 1000
     await test_message.edit(f"📡 Ping: {latency:.2f} ms\nBot is online and operational.")
 
-app.run()
+@app.on_message(filters.command("start"))
+async def start_command(client, message):
+    await message.reply("Bot is running!")
+
+if __name__ == "__main__":
+    app.run()
