@@ -10,6 +10,7 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from config import API_ID, API_HASH, BOT_TOKEN, IMAGE_URL, PAGE_SIZE, ADMIN_USER_ID, CHANNEL_USERNAME
 from handlers import register_handlers
 from api import get_user_api_key
+from Force_sub import not_subscribed, forces_sub
 
 # Initialize the set to track unique user IDs
 user_ids = set()
@@ -215,40 +216,8 @@ def run_health_check_server():
     httpd = HTTPServer(server_address, HealthCheckHandler)
     httpd.serve_forever()
 
-# Function to check if the user is subscribed to the channel
-async def is_user_subscribed(client, user_id):
-    try:
-        member = await client.get_chat_member(CHANNEL_USERNAME, user_id)
-        logging.debug(f"Member status: {member.status}")  # Debug logging
-        if member.status in ["member", "administrator", "creator"]:
-            return True
-        return False
-    except Exception as e:
-        logging.error(f"Error checking subscription status: {e}")
-        return False
-
-# Force subscription handler
-@app.on_message(filters.private)
-async def force_subscription(client, message):
-    user_id = message.from_user.id
-    if not await is_user_subscribed(client, user_id):
-        await message.reply("You must join our channel to use this bot: " + CHANNEL_USERNAME,
-                            reply_markup=InlineKeyboardMarkup(
-                                [[InlineKeyboardButton("Join Channel", url=f"https://t.me/{CHANNEL_USERNAME[1:]}")]]
-                            ))
-        return
-    await client.process_message(message)
-
 @app.on_callback_query(filters.regex(r"remote_upload_(\d+)"))
 async def remote_upload_callback(client, callback_query):
-    user_id = callback_query.from_user.id
-    if not await is_user_subscribed(client, user_id):
-        await callback_query.message.reply("You must join our channel to use this bot: " + CHANNEL_USERNAME,
-                            reply_markup=InlineKeyboardMarkup(
-                                [[InlineKeyboardButton("Join Channel", url=f"https://t.me/{CHANNEL_USERNAME[1:]}")]]
-                            ))
-        return
-
     global current_upload_folder_id
     folder_id = int(callback_query.data.split("_")[2])
     current_upload_folder_id = folder_id
