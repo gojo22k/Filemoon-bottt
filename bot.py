@@ -219,9 +219,9 @@ def run_health_check_server():
 async def remote_upload_callback(client, callback_query):
     user_id = callback_query.from_user.id
     if not await is_user_subscribed(client, user_id):
-        await callback_query.message.reply("You must join our channel to use this bot: @YOUR_CHANNEL_USERNAME",
+        await callback_query.message.reply("You must join our channel to use this bot: @AniflixCLoud",
                             reply_markup=InlineKeyboardMarkup(
-                                [[InlineKeyboardButton("Join Channel", url="https://t.me/YOUR_CHANNEL_USERNAME")]]
+                                [[InlineKeyboardButton("Join Channel", url="https://t.me/AniflixCloud")]]
                             ))
         return
 
