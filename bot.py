@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 import asyncio
 import requests
@@ -158,6 +159,7 @@ def delete_folder(folder_id, api_key):
     except requests.RequestException as e:
         logging.error(f"Request error: {e}")
         return False, str(e)
+        
 # Function to start remote upload
 def remote_upload(url, folder_id, api_key):
     upload_url = f"https://filemoonapi.com/api/remote/add?key={api_key}&url={url}&fld_id={folder_id}"
@@ -212,8 +214,13 @@ async def remote_upload_callback(client, callback_query):
         user_id = message.from_user.id  # Get user ID to fetch their API key
         api_key = get_user_api_key(user_id)  # Function to fetch API key for the user
         
-        if message.text and api_key:
-            success, filecode = remote_upload(message.text, folder_id, api_key)
+        url_pattern = re.compile(
+            r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+        )
+        urls = url_pattern.findall(message.text)
+
+        if urls and api_key:
+            success, filecode = remote_upload(urls[0], folder_id, api_key)
             if success:
                 upload_message = await message.reply(f"File added to remote upload queue with code: {filecode}")
 
@@ -263,7 +270,8 @@ async def remote_upload_callback(client, callback_query):
             else:
                 await message.reply(f"Failed to start remote upload. {filecode}")
         else:
-            await message.reply("No API key found or invalid URL.")
+            await message.reply("No valid URL found or invalid URL.")
+
 
 
 @app.on_message(filters.command("start"))
