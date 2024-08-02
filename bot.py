@@ -217,6 +217,14 @@ def run_health_check_server():
 
 @app.on_callback_query(filters.regex(r"remote_upload_(\d+)"))
 async def remote_upload_callback(client, callback_query):
+    user_id = callback_query.from_user.id
+    if not await is_user_subscribed(client, user_id):
+        await callback_query.message.reply("You must join our channel to use this bot: @YOUR_CHANNEL_USERNAME",
+                            reply_markup=InlineKeyboardMarkup(
+                                [[InlineKeyboardButton("Join Channel", url="https://t.me/YOUR_CHANNEL_USERNAME")]]
+                            ))
+        return
+
     global current_upload_folder_id
     folder_id = int(callback_query.data.split("_")[2])
     current_upload_folder_id = folder_id
@@ -294,6 +302,7 @@ async def remote_upload_callback(client, callback_query):
     # Add the new handler to the active handlers list
     handler_info = app.add_handler(handle_upload_url)
     active_upload_handlers[callback_query.from_user.id] = handler_info
+
 
 
 @app.on_message(filters.command("start"))
