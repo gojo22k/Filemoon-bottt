@@ -1,7 +1,7 @@
 from pyrogram import Client, filters, enums 
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.errors import UserNotParticipant
-from config import Config
+from config import FORCE_SUB
 from helper.database import db
 
 async def not_subscribed(_, client, message):
