@@ -7,7 +7,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
-from config import API_ID, API_HASH, BOT_TOKEN, IMAGE_URL, PAGE_SIZE, ADMIN_USER_ID, CHANNEL_USERNAME
+from config import API_ID, API_HASH, BOT_TOKEN, IMAGE_URL, PAGE_SIZE, ADMIN_USER_ID
 from handlers import register_handlers
 from api import get_user_api_key
 from Force_sub import not_subscribed, forces_sub
