@@ -220,7 +220,7 @@ async def remote_upload_callback(client, callback_query):
     global current_upload_folder_id
     folder_id = int(callback_query.data.split("_")[2])
     current_upload_folder_id = folder_id
-    await callback_query.message.reply("Send the URL for remote upload:")
+    await callback_query.message.reply("Send the URLs for remote upload:")
 
     # Remove any existing handlers for the same user
     if callback_query.from_user.id in active_upload_handlers:
@@ -233,64 +233,68 @@ async def remote_upload_callback(client, callback_query):
         user_id = message.from_user.id  # Get user ID to fetch their API key
         api_key = get_user_api_key(user_id)  # Function to fetch API key for the user
 
-        # Validate the URL
-        url_pattern = re.compile(r'^(http|https)://')
-        if url_pattern.match(message.text) and api_key:
-            success, filecode = remote_upload(message.text.strip(), folder_id, api_key)
-            if success:
-                upload_message = await message.reply(f"File added to remote upload queue with code: {filecode}")
+        # Validate the URLs and extract them
+        url_pattern = re.compile(r'http[s]?://[^\s]+')
+        urls = url_pattern.findall(message.text)
+        
+        if urls and api_key:
+            for url in urls:
+                success, filecode = remote_upload(url.strip(), folder_id, api_key)
+                if success:
+                    upload_message = await message.reply(f"File added to remote upload queue with code: {filecode}")
 
-                last_content = None  # Variable to store the last content of the message
-                upload_completed = False  # Flag to indicate if the upload is completed or failed
+                    last_content = None  # Variable to store the last content of the message
+                    upload_completed = False  # Flag to indicate if the upload is completed or failed
 
-                # Polling the upload status
-                while not upload_completed:
-                    await asyncio.sleep(3)  # Wait for 3 seconds before checking again
-                    upload_success, status = check_upload_status(filecode, api_key)  # Include api_key here
-                    if upload_success:
-                        result = status.get('result', [])
-                        if result:
-                            result = result[0]  # Get the first item in the result list
-                            progress = int(result.get('progress', '0'))
-                            status_text = result.get('status', '').upper()  # Status should be in capital letters
+                    # Polling the upload status
+                    while not upload_completed:
+                        await asyncio.sleep(3)  # Wait for 3 seconds before checking again
+                        upload_success, status = check_upload_status(filecode, api_key)  # Include api_key here
+                        if upload_success:
+                            result = status.get('result', [])
+                            if result:
+                                result = result[0]  # Get the first item in the result list
+                                progress = int(result.get('progress', '0'))
+                                status_text = result.get('status', '').upper()  # Status should be in capital letters
 
-                            if status_text == "WORKING":
-                                progress_bar = build_progress_bar(progress)
-                                new_content = f"⏳ Upload in progress... FileId: {filecode}\n{progress_bar}"
-                            elif status_text == "COMPLETED":
-                                if status.get("msg") == "OK":
-                                    new_content = f"✅ Upload completed successfully for file: {filecode}\n{build_progress_bar(progress, is_completed=True)}"
-                                else:
+                                if status_text == "WORKING":
+                                    progress_bar = build_progress_bar(progress)
+                                    new_content = f"⏳ Upload in progress... FileId: {filecode}\n{progress_bar}"
+                                elif status_text == "COMPLETED":
+                                    if status.get("msg") == "OK":
+                                        new_content = f"✅ Upload completed successfully for file: {filecode}\n{build_progress_bar(progress, is_completed=True)}"
+                                    else:
+                                        new_content = f"❌ Upload failed for file: {filecode}\n{build_progress_bar(progress)}"
+                                    upload_completed = True  # Stop polling
+                                elif status_text == "ERROR":
                                     new_content = f"❌ Upload failed for file: {filecode}\n{build_progress_bar(progress)}"
-                                upload_completed = True  # Stop polling
-                            elif status_text == "ERROR":
-                                new_content = f"❌ Upload failed for file: {filecode}\n{build_progress_bar(progress)}"
-                                upload_completed = True  # Stop polling
-                            else:
-                                continue  # Continue polling if the status is neither WORKING, COMPLETED, nor ERROR
+                                    upload_completed = True  # Stop polling
+                                else:
+                                    continue  # Continue polling if the status is neither WORKING, COMPLETED, nor ERROR
 
-                            # Only update message if content has changed
-                            if new_content != last_content:
+                                # Only update message if content has changed
+                                if new_content != last_content:
+                                    await upload_message.edit(new_content)
+                                    last_content = new_content
+                            else:
+                                # Result list is empty, consider it a success
+                                progress = 100
+                                progress_bar = build_progress_bar(progress, is_completed=True)
+                                new_content = f"✅ Upload completed successfully for file: {filecode}\n{progress_bar}"
                                 await upload_message.edit(new_content)
-                                last_content = new_content
+                                upload_completed = True  # Stop polling
                         else:
-                            # Result list is empty, consider it a success
-                            progress = 100
-                            progress_bar = build_progress_bar(progress, is_completed=True)
-                            new_content = f"✅ Upload completed successfully for file: {filecode}\n{progress_bar}"
-                            await upload_message.edit(new_content)
-                            upload_completed = True  # Stop polling
-                    else:
-                        await upload_message.edit(f"❌ Failed to check upload status: {status}")
-                        break
-            else:
-                await message.reply(f"Failed to start remote upload. {filecode}")
+                            await upload_message.edit(f"❌ Failed to check upload status: {status}")
+                            break
+                else:
+                    await message.reply(f"Failed to start remote upload. {filecode}")
         else:
-            await message.reply("Invalid URL or no API key found.")
+            await message.reply("Invalid URLs or no API key found.")
 
     # Add the new handler to the active handlers list
     handler_info = app.add_handler(handle_upload_url)
     active_upload_handlers[callback_query.from_user.id] = handler_info
+
 
 @app.on_message(filters.command("start"))
 async def start_command(client, message):
