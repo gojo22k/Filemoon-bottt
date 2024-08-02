@@ -215,15 +215,19 @@ def run_health_check_server():
     httpd = HTTPServer(server_address, HealthCheckHandler)
     httpd.serve_forever()
 
+# Function to check if the user is subscribed to the channel
 async def is_user_subscribed(client, user_id):
     try:
         member = await client.get_chat_member(CHANNEL_USERNAME, user_id)
+        logging.debug(f"Member status: {member.status}")  # Debug logging
         if member.status in ["member", "administrator", "creator"]:
             return True
         return False
-    except:
+    except Exception as e:
+        logging.error(f"Error checking subscription status: {e}")
         return False
 
+# Force subscription handler
 @app.on_message(filters.private)
 async def force_subscription(client, message):
     user_id = message.from_user.id
