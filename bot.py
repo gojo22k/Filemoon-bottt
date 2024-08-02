@@ -30,6 +30,7 @@ async def fetch_user_api_key(user_id):
 current_rename_folder_id = None
 current_delete_folder_id = None
 current_upload_folder_id = None
+active_upload_handlers = {}
 
 def get_account_info(api_key):
     account_url = f"https://filemoonapi.com/api/account/info?key={api_key}"
@@ -175,7 +176,6 @@ def remote_upload(url, folder_id, api_key):
         logging.error(f"Request error: {e}")
         return False, str(e)
 
-
 # Function to check the upload status
 def check_upload_status(filecode, api_key):
     status_url = f"https://filemoonapi.com/api/remote/status?key={api_key}&file_code={filecode}"
@@ -203,24 +203,26 @@ def build_progress_bar(percent, is_completed=False):
 
 @app.on_callback_query(filters.regex(r"remote_upload_(\d+)"))
 async def remote_upload_callback(client, callback_query):
-    folder_id = int(callback_query.data.split("_")[2])
     global current_upload_folder_id
+    folder_id = int(callback_query.data.split("_")[2])
     current_upload_folder_id = folder_id
     await callback_query.message.reply("Send the URL for remote upload:")
 
-    @app.on_message(filters.text)
+    # Remove any existing handlers for the same user
+    if callback_query.from_user.id in active_upload_handlers:
+        app.remove_handler(*active_upload_handlers.pop(callback_query.from_user.id))
+
+    # Define the new handler for the user
+    @app.on_message(filters.text & filters.user(callback_query.from_user.id))
     async def handle_upload_url(client, message):
         nonlocal folder_id
         user_id = message.from_user.id  # Get user ID to fetch their API key
         api_key = get_user_api_key(user_id)  # Function to fetch API key for the user
-        
-        url_pattern = re.compile(
-            r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
-        )
-        urls = url_pattern.findall(message.text)
 
-        if urls and api_key:
-            success, filecode = remote_upload(urls[0], folder_id, api_key)
+        # Validate the URL
+        url_pattern = re.compile(r'^(http|https)://')
+        if url_pattern.match(message.text) and api_key:
+            success, filecode = remote_upload(message.text.strip(), folder_id, api_key)
             if success:
                 upload_message = await message.reply(f"File added to remote upload queue with code: {filecode}")
 
@@ -270,7 +272,11 @@ async def remote_upload_callback(client, callback_query):
             else:
                 await message.reply(f"Failed to start remote upload. {filecode}")
         else:
-            await message.reply("No valid URL found or invalid URL.")
+            await message.reply("Invalid URL or no API key found.")
+
+    # Add the new handler to the active handlers list
+    handler_info = app.add_handler(handle_upload_url)
+    active_upload_handlers[callback_query.from_user.id] = handler_info
 
 
 
