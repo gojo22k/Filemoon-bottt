@@ -200,7 +200,7 @@ def build_progress_bar(percent, is_completed=False):
     bar = '█' * filled_length + '▒' * (bar_length - filled_length)
     if is_completed:
         return f"{bar} {int(percent)}% (Completed)"
-    return f"{bar} {int(percent)}%"    
+    return f"{bar} {int(percent)}%"
 
 # Health check endpoint
 class HealthCheckHandler(BaseHTTPRequestHandler):
@@ -216,12 +216,11 @@ def run_health_check_server():
     httpd = HTTPServer(server_address, HealthCheckHandler)
     httpd.serve_forever()
 
+# Handle remote upload selection
 @app.on_callback_query(filters.regex(r"remote_upload_(\d+)"))
 async def remote_upload_callback(client, callback_query):
-    global current_upload_folder_id
     folder_id = int(callback_query.data.split("_")[2])
-    current_upload_folder_id = folder_id
-    await callback_query.message.reply("Send the URLs for remote upload:")
+    await callback_query.message.reply("Please send me the URL for the remote upload to this folder.")
 
     # Remove any existing handlers for the same user
     if callback_query.from_user.id in active_upload_handlers:
