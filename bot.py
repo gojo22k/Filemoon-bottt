@@ -134,37 +134,9 @@ def create_folder(name, api_key):
         logging.error(f"Request error: {e}")
         return False, str(e)
 
-def rename_folder(folder_id, new_name, api_key):
-    url = f"https://filemoonapi.com/api/folder/rename?key={api_key}&fld_id={folder_id}&name={new_name}"
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        if data["status"] == 200:
-            return True, "Folder renamed successfully."
-        else:
-            return False, f"Failed to rename folder. {data.get('msg', 'Invalid operation')}"
-    except requests.RequestException as e:
-        logging.error(f"Request error: {e}")
-        return False, str(e)
-
-def delete_folder(folder_id, api_key):
-    url = f"https://filemoonapi.com/api/folder/delete?key={api_key}&fld_id={folder_id}"
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        if data["status"] == 200:
-            return True, "Folder deleted successfully."
-        else:
-            return False, f"Failed to delete folder. {data.get('msg', 'Invalid operation')}"
-    except requests.RequestException as e:
-        logging.error(f"Request error: {e}")
-        return False, str(e)
-        
 # Function to start remote upload
-def remote_upload(url, folder_name, api_key):
-    upload_url = f"https://filemoonapi.com/api/remote/add?key={api_key}&url={url}&fld_name={folder_name}"
+def remote_upload(url, folder_id, api_key):
+    upload_url = f"https://filemoonapi.com/api/remote/add?key={api_key}&url={url}&fld_id={folder_id}"
     try:
         response = requests.get(upload_url)
         response.raise_for_status()
@@ -217,19 +189,19 @@ def run_health_check_server():
     httpd.serve_forever()
 
 # Handle remote upload selection
-@app.on_callback_query(filters.regex(r"remote_upload_(.+)"))
+@app.on_callback_query(filters.regex(r"remote_upload_(\d+)"))
 async def remote_upload_callback(client, callback_query):
-    folder_name = callback_query.data.split("_", 2)[2]
-    await callback_query.message.reply(f"Please send me the URL for the remote upload to the folder: {folder_name}")
+    folder_id = int(callback_query.data.split("_")[2])
+    await callback_query.message.reply(f"Selected folder ID: {folder_id}. Please send the URL for remote upload:")
 
-    # Clear any existing handlers for the same user
+    # Remove any existing handlers for the same user
     if callback_query.from_user.id in active_upload_handlers:
         app.remove_handler(*active_upload_handlers.pop(callback_query.from_user.id))
 
     # Define the new handler for the user
     @app.on_message(filters.text & filters.user(callback_query.from_user.id))
     async def handle_upload_url(client, message):
-        nonlocal folder_name
+        nonlocal folder_id
         user_id = message.from_user.id  # Get user ID to fetch their API key
         api_key = get_user_api_key(user_id)  # Function to fetch API key for the user
 
@@ -239,7 +211,7 @@ async def remote_upload_callback(client, callback_query):
         
         if urls and api_key:
             for url in urls:
-                success, filecode = remote_upload(url.strip(), folder_name, api_key)
+                success, filecode = remote_upload(url.strip(), folder_id, api_key)
                 if success:
                     upload_message = await message.reply(f"File added to remote upload queue with code: {filecode}")
 
