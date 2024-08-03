@@ -199,9 +199,7 @@ async def remote_upload_callback(client, callback_query):
         app.remove_handler(*active_upload_handlers.pop(callback_query.from_user.id))
 
     # Define the new handler for the user
-    @app.on_message(filters.text & filters.user(callback_query.from_user.id))
-    async def handle_upload_url(client, message):
-        nonlocal folder_id
+    async def handle_upload_url(client, message, folder_id=folder_id):
         user_id = message.from_user.id  # Get user ID to fetch their API key
         api_key = get_user_api_key(user_id)  # Function to fetch API key for the user
 
@@ -264,8 +262,9 @@ async def remote_upload_callback(client, callback_query):
             await message.reply("Invalid URLs or no API key found.")
 
     # Add the new handler to the active handlers list
-    handler_info = app.add_handler(handle_upload_url)
+    handler_info = app.add_handler(filters.text & filters.user(callback_query.from_user.id), handle_upload_url)
     active_upload_handlers[callback_query.from_user.id] = handler_info
+
 
 @app.on_message(filters.command("start"))
 async def start_command(client, message):
